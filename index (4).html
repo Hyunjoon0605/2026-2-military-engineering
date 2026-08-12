@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>군사공학 팀티칭 편성 생성기</title>
+<style>
+  :root{
+    --ink:#16233B; --ink-2:#3D4C68; --ink-3:#6E7A91;
+    --rule:#C6CCD9; --paper:#FFFFFF; --chrome:#EDEFF3;
+    --brass:#8C6E1C; --rest:#EFF1F5;
+
+    --bg-기계:#FAE3E1; --md-기계:#F2C6C1; --ln-기계:#C2564B;
+    --bg-시스템:#FCF2D4; --md-시스템:#F6E2A9; --ln-시스템:#B08A1E;
+    --bg-전자:#DFEAF7; --md-전자:#C2D8F0; --ln-전자:#3B6DA6;
+    --bg-토목:#F1E7D7; --md-토목:#E2D0B4; --ln-토목:#8A6535;
+    --bg-환경:#E1EEDE; --md-환경:#C6E0C1; --ln-환경:#4C7C4A;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--chrome); color:var(--ink);
+    font-family:"Malgun Gothic","맑은 고딕",Pretendard,"Apple SD Gothic Neo",sans-serif;
+    font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
+    word-break:keep-all; overflow-wrap:break-word; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+
+  header.masthead{
+    border-bottom:2px solid var(--ink); padding-bottom:14px; margin-bottom:24px;
+    display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap;
+  }
+  .masthead h1{margin:0;font-size:23px;font-weight:700;letter-spacing:-0.02em}
+  .masthead .sub{margin:4px 0 0;color:var(--ink-3);font-size:13px}
+  .masthead .stamp{
+    font-size:11px;letter-spacing:0.18em;color:var(--brass);
+    border:1px solid var(--brass);padding:5px 11px;white-space:nowrap;
+  }
+
+  .panel{background:var(--paper);border:1px solid var(--rule);padding:20px 22px;margin-bottom:18px}
+  .panel > h2{margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:0.06em;display:flex;align-items:center;gap:9px}
+  .panel > h2::before{
+    content:attr(data-step);font-size:10px;color:var(--paper);background:var(--ink);
+    width:19px;height:19px;display:inline-flex;align-items:center;justify-content:center;flex:none;font-weight:700;
+  }
+  .panel .hint{margin:0 0 16px 28px;color:var(--ink-3);font-size:12.5px}
+
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+  .plan{border:1px solid var(--rule);background:var(--paper);padding:12px 14px;text-align:left;
+    cursor:pointer;font:inherit;color:inherit;transition:border-color .12s,background .12s}
+  .plan:hover{border-color:var(--ink-2)}
+  .plan[aria-pressed="true"]{border-color:var(--ink);background:#F7F8FA;box-shadow:inset 3px 0 0 var(--ink)}
+  .plan .pn{font-weight:700;font-size:14px}
+  .plan .pd{color:var(--ink-3);font-size:12px;margin-top:3px}
+
+  .datewrap{margin-top:16px}
+  .dategrid{display:flex;flex-wrap:wrap;gap:6px}
+  .dchip{border:1px solid var(--rule);background:var(--paper);padding:5px 9px;font:inherit;
+    font-size:12.5px;color:var(--ink-2);cursor:pointer;min-width:74px;text-align:center}
+  .dchip:hover{border-color:var(--ink-2)}
+  .dchip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700}
+  .status{margin-top:12px;font-size:12.5px;padding:8px 12px;border-left:3px solid var(--rule);background:#F7F8FA;color:var(--ink-2)}
+  .status.ok{border-left-color:var(--ln-환경)}
+  .status.bad{border-left-color:#A33;color:#8A2A2A;background:#FBF2F2}
+
+  .cycle{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .slot{border:1px solid var(--rule);padding:12px 12px 14px;background:var(--paper);position:relative}
+  .slot .idx{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);margin-bottom:8px}
+  .slot select,.slot input{width:100%;font:inherit;font-size:13px;padding:6px 7px;
+    border:1px solid var(--rule);background:var(--paper);color:var(--ink)}
+  .slot select{font-weight:700;margin-bottom:6px}
+  .slot input{color:var(--ink-2)}
+  .slot .duty{margin-top:10px;font-size:11.5px;line-height:1.7;color:var(--ink-3)}
+  .slot .duty b{color:var(--ink);font-weight:700}
+  .slot .duty .rest{color:var(--brass);font-weight:700}
+  .slot::after{content:"";position:absolute;left:0;top:0;width:100%;height:4px;background:var(--slotcolor,var(--rule))}
+
+  .tabs{display:flex;border-bottom:1px solid var(--rule);margin:26px 0 0}
+  .tab{font:inherit;font-size:13px;padding:10px 18px;border:1px solid transparent;border-bottom:none;
+    background:none;cursor:pointer;color:var(--ink-3);margin-bottom:-1px}
+  .tab[aria-selected="true"]{background:var(--paper);border-color:var(--rule);color:var(--ink);font-weight:700}
+
+  /* 하위 배너 */
+  .banner{display:flex;flex-wrap:wrap;gap:7px;background:var(--paper);
+    border:1px solid var(--rule);border-top:none;padding:12px 14px}
+  .bchip{font:inherit;font-size:13px;padding:7px 15px;cursor:pointer;
+    border:1px solid var(--rule);background:var(--paper);color:var(--ink-2);
+    display:inline-flex;align-items:center;gap:8px;transition:border-color .12s}
+  .bchip .sw{width:11px;height:11px;flex:none;border:1px solid rgba(0,0,0,.18)}
+  .bchip:hover{border-color:var(--ink-2)}
+  .bchip[aria-pressed="true"]{color:var(--ink);font-weight:700;
+    border-color:var(--chipline,var(--ink));background:var(--chipbg,#F7F8FA);box-shadow:inset 0 -3px 0 var(--chipline,var(--ink))}
+
+  .toolbar{display:flex;justify-content:flex-end;gap:8px;margin:14px 0}
+  .btn{font:inherit;font-size:12.5px;padding:7px 14px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+  .btn.ghost{background:var(--paper);color:var(--ink)}
+  .btn:hover{opacity:.88}
+
+  table{border-collapse:collapse;width:100%}
+  .matrix{background:var(--paper);font-size:13px}
+  .matrix th,.matrix td{border:1px solid var(--rule);padding:8px 10px;text-align:center}
+  .matrix thead th{background:#E9ECF2;font-weight:700;font-size:12.5px}
+  .matrix td.time{font-weight:700;background:#F5F6F9;white-space:nowrap}
+  .matrix td.range{color:var(--ink-3);font-size:12px;white-space:nowrap}
+  .matrix td.restcell{background:var(--rest);color:var(--ink-3);font-size:12.5px}
+  .matrix td.subj{padding:6px}
+  .tag{display:block;padding:5px 8px;font-size:12.5px;font-weight:700;color:var(--ink);
+    border-left:4px solid var(--ink)}
+  .tag small{display:block;font-weight:400;font-size:11px;color:var(--ink-2);margin-top:1px}
+
+  .sheet{background:var(--paper);border:1px solid var(--rule);padding:22px 24px 20px;margin-bottom:20px}
+  .sheet h3{text-align:center;font-size:19px;letter-spacing:.5em;margin:0 0 4px;font-weight:700}
+  .sheet .course{text-align:center;font-size:13px;margin:0}
+  .sheet .who{text-align:center;font-size:15px;font-weight:700;margin:8px 0 2px;
+    display:inline-block;padding:4px 16px;border-bottom:4px solid var(--wholine,var(--ink))}
+  .sheet .whowrap{text-align:center}
+  .sheet .basis{font-size:11.5px;color:var(--ink-3);margin:10px 0 5px}
+  .jd{font-size:11.5px}
+  .jd th,.jd td{border:1px solid #8A93A6;padding:2px 4px;text-align:center}
+  .jd thead th{background:#E9ECF2;font-weight:700;padding:4px}
+  .jd td.content{text-align:left;padding-left:7px}
+  .jd td.wk{font-weight:700;background:#F5F6F9}
+  .jd tr.off td:not(.wk){background:var(--rest);color:var(--ink-3)}
+  .jd tr.rest td:not(.wk){background:var(--rest);color:var(--ink-3)}
+  .jd tr.quiz td.content{font-weight:700}
+  .sheet .foot{font-size:11px;color:var(--ink-3);margin:8px 0 0}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--ink-2);margin:10px 0 0}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:13px;height:13px;border:1px solid rgba(0,0,0,.2);display:inline-block}
+
+  .mobile-only{display:none}
+  @media screen and (max-width:640px){.mobile-only{display:inline-flex !important}}
+  .empty{background:var(--paper);border:1px dashed var(--rule);padding:40px;text-align:center;color:var(--ink-3)}
+
+  /* ===== 대시보드 홈 ===== */
+  .mast-left{display:flex;align-items:center;gap:14px}
+  .backbtn{font:inherit;font-size:12.5px;color:var(--ink-2);background:var(--paper);
+    border:1px solid var(--rule);padding:7px 12px 7px 9px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:border-color .12s}
+  .backbtn:hover{border-color:var(--ink-2)}
+  .backbtn[hidden]{display:none}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;margin-top:6px}
+  .card{display:flex;align-items:flex-start;gap:15px;text-align:left;
+    background:var(--paper);border:1px solid var(--rule);padding:22px 20px;
+    font:inherit;color:inherit;cursor:pointer;text-decoration:none;position:relative;
+    transition:border-color .14s,transform .14s,box-shadow .14s}
+  .card::before{content:"";position:absolute;left:0;top:0;width:100%;height:4px;background:var(--accent,var(--ink))}
+  .card:hover{border-color:var(--ink-2);transform:translateY(-2px);box-shadow:0 6px 18px rgba(22,35,59,.10)}
+  .card-tool{--accent:linear-gradient(90deg,var(--ln-기계),var(--ln-전자),var(--ln-시스템),var(--ln-환경),var(--ln-토목))}
+  .card-drive{--accent:linear-gradient(90deg,#4285F4,#0F9D58,#F9C013)}
+  .card-ic{flex:none;width:52px;height:52px;display:inline-flex;align-items:center;justify-content:center;
+    border:1px solid var(--rule);background:#FAFBFC}
+  .card-body{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .card-t{font-size:16px;font-weight:700;color:var(--ink);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .card-t em{font-style:normal;font-size:11.5px;font-weight:400;color:var(--ink-3);
+    border:1px solid var(--rule);padding:1px 7px}
+  .card-d{font-size:12.5px;color:var(--ink-3);line-height:1.6}
+  .card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}
+  .card-tags i{font-style:normal;font-size:11px;color:var(--ink-2);
+    background:#F4F6F9;border:1px solid var(--rule);padding:2px 8px}
+  .card-go{position:absolute;right:16px;bottom:14px;color:var(--ink-3);font-size:15px}
+  .card:hover .card-go{color:var(--ink)}
+
+  /* ===== 반응형 ===== */
+  .scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .jd td.c-date,.jd th.c-date,.jd td.c-time,.jd td.c-page,
+  .matrix td.m-range,.matrix td.time{white-space:nowrap}
+  .jd th{white-space:nowrap}
+
+  @media (max-width:900px){
+    .cycle{grid-template-columns:repeat(2,1fr)}
+    .wrap{padding:18px 12px 60px}
+  }
+  @media screen and (max-width:640px){
+    .wrap{padding:14px 10px 56px}
+    .masthead{align-items:flex-start;flex-direction:column;gap:10px;padding-bottom:10px}
+    .masthead h1{font-size:19px}
+    .panel{padding:15px 13px}
+    .panel .hint{margin-left:0}
+    .plans{grid-template-columns:1fr}
+    .cards{grid-template-columns:1fr;gap:12px}
+    .card{padding:17px 15px;gap:12px}
+    .card-ic{width:44px;height:44px}
+    .card-t{font-size:15px}
+    .card-go{display:none}
+    .mast-left{gap:10px;width:100%}
+    .backbtn{padding:6px 10px 6px 8px;font-size:12px}
+    .dchip{min-width:0;flex:1 1 auto;padding:6px 7px;font-size:12px}
+    .dategrid{gap:5px}
+
+    /* 탭·배너는 한 줄 가로 스크롤 */
+    .tabs,.banner{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+      scrollbar-width:none}
+    .tabs::-webkit-scrollbar,.banner::-webkit-scrollbar{display:none}
+    .tab,.bchip{flex:none;white-space:nowrap}
+    .tab{padding:9px 13px;font-size:12.5px}
+
+    /* 진도표: 정보가 없는 서식 열은 숨기고 4열로 압축 */
+    .jd .c-title,.jd .c-time,.jd .c-page,.jd .c-lab,.jd .c-pres{display:none}
+    .jd .c-dow{display:none}
+    .jd{font-size:12px}
+    .jd th,.jd td{padding:4px 3px}
+    .jd td.content{padding-left:6px;line-height:1.45}
+    .jd td.c-date{font-variant-numeric:tabular-nums}
+    .sheet{padding:16px 12px 14px}
+    .sheet h3{font-size:16px;letter-spacing:.22em}
+    .sheet .who{font-size:14px;padding:4px 10px}
+
+    /* 요약표: 기간 열 숨김 */
+    .matrix .m-range{display:none}
+    .matrix{font-size:12px}
+    .matrix th,.matrix td{padding:6px 4px}
+    .matrix td.restcell{font-size:11.5px}
+    .tag{padding:4px 5px;font-size:12px}
+    .tag small{font-size:10.5px}
+    .legend{gap:9px;font-size:11px}
+  }
+  @media screen and (max-width:430px){
+    .cycle{grid-template-columns:1fr}
+    .slot{padding:10px 11px 12px}
+  }
+  @media print{
+    body{background:#fff}
+    .noprint{display:none !important}
+    .wrap{max-width:none;padding:0}
+    .sheet{border:none;padding:0;margin:0}
+    .sheet + .sheet{page-break-before:always}
+    .jd{font-size:9.5pt}
+    .jd th,.jd td{border:1px solid #555}
+    .matrix{page-break-after:always}
+    @page{size:A4 portrait;margin:12mm}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead noprint">
+    <div class="mast-left">
+      <button class="backbtn" id="btnBack" type="button" hidden aria-label="대시보드로 돌아가기">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+          <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg><span>대시보드</span>
+      </button>
+      <div>
+        <h1 id="pageTitle">26-2학기 군사공학 대시보드</h1>
+        <p class="sub" id="pageSub">2026학년도 2학기 · 화·목 1교시(75분) · 교수 5명 / 교반 3개</p>
+      </div>
+    </div>
+    <div class="stamp">육군사관학교</div>
+  </header>
+
+  <!-- ===== 대시보드 홈 ===== -->
+  <section id="home" class="noprint">
+    <div class="cards">
+      <button class="card card-tool" type="button" id="cardTool">
+        <span class="card-ic" aria-hidden="true">
+          <svg viewBox="0 0 40 40" width="34" height="34">
+            <rect x="4"  y="7"  width="32" height="5.4" rx="1.4" fill="var(--ln-전자)"/>
+            <rect x="4"  y="17.3" width="20" height="5.4" rx="1.4" fill="var(--ln-환경)"/>
+            <rect x="4"  y="27.6" width="27" height="5.4" rx="1.4" fill="var(--ln-기계)"/>
+          </svg>
+        </span>
+        <span class="card-body">
+          <span class="card-t">팀티칭 편성기</span>
+          <span class="card-d">학사일정과 담당 순서를 입력하면 교수별·교반별 수업진도표가 자동으로 만들어집니다. 인쇄하면 A4 한 장에 한 표씩 출력됩니다.</span>
+          <span class="card-tags"><i>편성 요약</i><i>교수별 진도표</i><i>교반별 진도표</i></span>
+        </span>
+        <span class="card-go" aria-hidden="true">→</span>
+      </button>
+
+      <a class="card card-drive"
+         href="https://drive.google.com/drive/folders/1-6h24mK479mUjOhgN7qcm2wjWACz1J0O?usp=sharing"
+         target="_blank" rel="noopener">
+        <span class="card-ic" aria-hidden="true">
+          <svg viewBox="0 0 40 40" width="34" height="34">
+            <path d="M20 5 L20 24 L5 32 Z"  fill="#4285F4"/>
+            <path d="M20 5 L20 24 L35 32 Z" fill="#F9C013"/>
+            <path d="M5 32 L20 24 L35 32 Z" fill="#0F9D58"/>
+          </svg>
+        </span>
+        <span class="card-body">
+          <span class="card-t">공유 자료실 <em>Google Drive</em></span>
+          <span class="card-d">과목 운영 자료를 모아둔 공유 폴더입니다. 새 탭에서 열립니다.</span>
+          <span class="card-tags"><i>교육진도표</i><i>수업계획표</i><i>교수별 점수 입력</i></span>
+        </span>
+        <span class="card-go" aria-hidden="true">↗</span>
+      </a>
+    </div>
+  </section>
+
+  <div id="tool" hidden>
+
+  <section class="panel noprint">
+    <h2 data-step="1">학사일정 안 선택</h2>
+    <p class="hint">특강 2회를 어디에 배치하느냐에 따라 타임 경계가 달라집니다. 아래에서 날짜를 직접 누르면 임의 지정으로 전환됩니다.</p>
+    <div class="plans" id="plans"></div>
+    <div class="datewrap">
+      <div class="dategrid" id="dategrid"></div>
+      <div class="status" id="status"></div>
+    </div>
+  </section>
+
+  <section class="panel noprint">
+    <h2 data-step="2">담당 순서 입력</h2>
+    <p class="hint">1교반이 수강하는 순서대로 배치합니다. 각 교수는 1교반 → 2교반 → 3교반으로 이동하며, 한 타임에 3명이 수업하고 2명이 휴식합니다.</p>
+    <div class="cycle" id="cycle"></div>
+  </section>
+
+  <div class="tabs noprint" id="tabs">
+    <button class="tab" data-view="summary" aria-selected="true">편성 요약</button>
+    <button class="tab" data-view="prof" aria-selected="false">교수별 진도표</button>
+    <button class="tab" data-view="class" aria-selected="false">교반별 진도표</button>
+  </div>
+  <div id="banner" class="noprint"></div>
+  <div class="toolbar noprint">
+    <button class="btn ghost" id="btnPrint">인쇄 / PDF 저장</button>
+  </div>
+
+  <div id="output"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var WEEKS = [
+    [1,["9/1","화"],["9/3","목"]],[2,["9/8","화"],["9/10","목"]],
+    [3,["9/15","화"],["9/17","목"]],[4,["9/22","화"],["9/24","목"]],
+    [5,["9/29","화"],["10/1","목"]],[6,["10/6","화"],["10/8","목"]],
+    [7,["10/13","화"],["10/15","목"]],[8,["10/20","화"],["10/22","목"]],
+    [9,["10/27","화"],["10/29","목"]],[10,["11/3","화"],["11/5","목"]],
+    [11,["11/10","화"],["11/12","목"]],[12,["11/17","화"],["11/19","목"]],
+    [13,["11/24","화"],["11/26","목"]],[14,["12/1","화"],["12/3","목"]],
+    [15,["12/8","화"],["12/10","목"]],[16,["12/15","화"],["12/17","목"]],
+    [17,["12/22","화"],["12/24","목"]],[18,["12/29","화"],["12/31","목"]],
+    [19,["1/4","화"],["1/6","목"]]
+  ];
+
+  var FIXED = {
+    "9/24":{content:"추석연휴"},
+    "10/1":{content:"국군의 날"},
+    "10/15":{content:"화랑제"},
+    "10/27":{title:"중간시험",content:"중간시험(교육예비)"},
+    "10/29":{title:"중간시험",content:"중간시험(교육예비)"},
+    "11/3":{title:"합동교육",content:"생도대 일정"},
+    "11/5":{title:"합동교육",content:"생도대 일정"},
+    "11/10":{title:"합동교육",content:"생도대 일정"},
+    "11/12":{title:"합동교육",content:"생도대 일정"},
+    "1/4":{title:"기말시험",content:"기말시험(교육예비)"},
+    "1/6":{title:"기말시험",content:"기말시험(교육예비)"}
+  };
+
+  var PLANS = [
+    {id:"1", name:"1안", dates:["9/29","11/26"]}
+  ];
+
+  var SESSIONS = [];
+  WEEKS.forEach(function(w){
+    SESSIONS.push({week:w[0], first:true,  md:w[1][0], dow:w[1][1]});
+    SESSIONS.push({week:w[0], first:false, md:w[2][0], dow:w[2][1]});
+  });
+  var SELECTABLE = SESSIONS.filter(function(s){ return !FIXED[s.md]; });
+
+  var FIELDS = ["기계","시스템","전자","토목","환경"];
+  var HUE = {"기계":"옅은 빨강","시스템":"옅은 노랑","전자":"옅은 파랑","토목":"옅은 갈색","환경":"옅은 초록"};
+  var DEFAULT_NAMES = {
+    "기계":"김주희 대령","시스템":"김현준 대위","전자":"이무현 대위",
+    "토목":"김연재 대위","환경":"정상조 대령"
+  };
+
+  var state = {
+    plan:"1",
+    lectures:PLANS[0].dates.slice(),
+    order:["기계","전자","시스템","환경","토목"],
+    names:Object.assign({},DEFAULT_NAMES),
+    view:"summary",
+    profTab:"시스템",
+    classTab:"1"
+  };
+
+  function bg(f){ return "var(--bg-"+f+")"; }
+  function md(f){ return "var(--md-"+f+")"; }
+  function ln(f){ return "var(--ln-"+f+")"; }
+
+  function compute(){
+    var lec = state.lectures;
+    var teaching = SESSIONS.filter(function(s){
+      return !FIXED[s.md] && lec.indexOf(s.md) === -1;
+    });
+    var valid = teaching.length === 25;
+    var timeOf = {}, quiz = {}, blocks = [];
+    if(valid){
+      for(var t=0;t<5;t++){
+        var chunk = teaching.slice(t*5,t*5+5);
+        blocks.push(chunk);
+        chunk.forEach(function(s){ timeOf[s.md] = t; });
+        quiz[chunk[4].md] = t;
+      }
+    }
+    return {teaching:teaching, valid:valid, timeOf:timeOf, quiz:quiz, blocks:blocks};
+  }
+
+  function slotAt(t,j){ return ((t - (j-1)) % 5 + 5) % 5; }
+  function classAt(p,t){ for(var j=1;j<=3;j++) if(slotAt(t,j) === p) return j; return 0; }
+  function labelOf(p){ var f = state.order[p]; return state.names[f] + "(" + f + ")"; }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[m];}); }
+  function rangeOf(b){ return b[0].md + " ~ " + b[4].md; }
+
+  /* ---------- 안 ---------- */
+  function renderPlans(){
+    var el = document.getElementById("plans"); el.innerHTML = "";
+    PLANS.forEach(function(p){
+      var b = document.createElement("button");
+      b.className = "plan"; b.type = "button";
+      b.setAttribute("aria-pressed", state.plan === p.id ? "true" : "false");
+      b.innerHTML = '<div class="pn">'+p.name+'</div><div class="pd">특강 '+p.dates[0]+' · '+p.dates[1]+'</div>';
+      b.addEventListener("click", function(){ state.plan = p.id; state.lectures = p.dates.slice(); renderAll(); });
+      el.appendChild(b);
+    });
+    var c = document.createElement("button");
+    c.className = "plan"; c.type = "button";
+    c.setAttribute("aria-pressed", state.plan === "custom" ? "true" : "false");
+    c.innerHTML = '<div class="pn">임의 지정</div><div class="pd">' +
+      (state.plan === "custom" ? (state.lectures.length ? "특강 " + state.lectures.join(" · ") : "날짜를 선택하세요")
+                               : "아래에서 날짜를 직접 선택") + '</div>';
+    c.addEventListener("click", function(){ state.plan = "custom"; renderAll(); });
+    el.appendChild(c);
+  }
+
+  function renderDates(){
+    var grid = document.getElementById("dategrid"); grid.innerHTML = "";
+    SELECTABLE.forEach(function(s){
+      var b = document.createElement("button");
+      b.className = "dchip"; b.type = "button";
+      b.setAttribute("aria-pressed", state.lectures.indexOf(s.md) !== -1 ? "true" : "false");
+      b.textContent = s.md + "(" + s.dow + ")";
+      b.addEventListener("click", function(){
+        var i = state.lectures.indexOf(s.md);
+        if(i === -1) state.lectures.push(s.md); else state.lectures.splice(i,1);
+        state.lectures.sort(function(a,b2){
+          return SELECTABLE.findIndex(function(x){return x.md===a;}) -
+                 SELECTABLE.findIndex(function(x){return x.md===b2;});
+        });
+        state.plan = "custom";
+        PLANS.forEach(function(p){
+          if(p.dates.length === state.lectures.length &&
+             p.dates.every(function(d){ return state.lectures.indexOf(d) !== -1; })) state.plan = p.id;
+        });
+        renderAll();
+      });
+      grid.appendChild(b);
+    });
+  }
+
+  function renderStatus(c){
+    var el = document.getElementById("status");
+    var n = state.lectures.length;
+    if(c.valid){
+      el.className = "status ok";
+      el.textContent = "특강 " + n + "회 지정 → 실수업 25회, 타임당 5회씩 5개 타임. 수시시험일: " +
+        c.blocks.map(function(b,i){ return "T"+(i+1)+" "+b[4].md; }).join(" · ");
+    }else{
+      el.className = "status bad";
+      el.textContent = "특강 " + n + "회 지정 → 실수업 " + c.teaching.length +
+        "회. 5개 타임 × 5회로 나누려면 특강을 정확히 2회 지정해야 합니다.";
+    }
+  }
+
+  /* ---------- 순서 ---------- */
+  function renderCycle(){
+    var el = document.getElementById("cycle"); el.innerHTML = "";
+    state.order.forEach(function(field,p){
+      var d = document.createElement("div");
+      d.className = "slot";
+      d.style.setProperty("--slotcolor", ln(field));
+
+      var idx = document.createElement("div");
+      idx.className = "idx"; idx.textContent = (p+1) + "번 자리";
+      d.appendChild(idx);
+
+      var sel = document.createElement("select");
+      FIELDS.forEach(function(f){
+        var o = document.createElement("option");
+        o.value = f; o.textContent = f;
+        if(f === field) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener("change", function(){
+        var target = sel.value, q = state.order.indexOf(target);
+        state.order[q] = state.order[p];
+        state.order[p] = target;
+        renderAll();
+      });
+      d.appendChild(sel);
+
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.value = state.names[field];
+      inp.setAttribute("aria-label", field + " 담당 교수명");
+      inp.addEventListener("input", function(){ state.names[field] = inp.value; renderBanner(); renderOutput(); });
+      d.appendChild(inp);
+
+      var teach = [], rest = [];
+      for(var t=0;t<5;t++){
+        var j = classAt(p,t);
+        if(j) teach.push("T"+(t+1)+" "+j+"교반"); else rest.push("T"+(t+1));
+      }
+      var duty = document.createElement("div");
+      duty.className = "duty";
+      duty.innerHTML = "담당 <b>" + teach.join("</b> · <b>") + "</b><br>휴식 <span class='rest'>" + rest.join(", ") + "</span>";
+      d.appendChild(duty);
+      el.appendChild(d);
+    });
+  }
+
+  /* ---------- 배너 ---------- */
+  function renderBanner(){
+    var el = document.getElementById("banner");
+    el.innerHTML = "";
+    if(state.view === "summary"){ el.className = "noprint"; return; }
+    el.className = "banner noprint";
+
+    var items = [];
+    if(state.view === "prof"){
+      state.order.forEach(function(f){ items.push({key:f, label:f, sub:state.names[f], field:f}); });
+      items.push({key:"all", label:"전체", sub:"", field:null});
+    }else{
+      ["1","2","3"].forEach(function(j){ items.push({key:j, label:j+"교반", sub:"", field:null}); });
+      items.push({key:"all", label:"전체", sub:"", field:null});
+    }
+
+    items.forEach(function(it){
+      var b = document.createElement("button");
+      b.className = "bchip"; b.type = "button";
+      var cur = state.view === "prof" ? state.profTab : state.classTab;
+      b.setAttribute("aria-pressed", cur === it.key ? "true" : "false");
+      if(it.field){
+        b.style.setProperty("--chipline", ln(it.field));
+        b.style.setProperty("--chipbg", bg(it.field));
+        b.innerHTML = '<i class="sw" style="background:'+bg(it.field)+';border-color:'+ln(it.field)+'"></i>' +
+          esc(it.label) + (it.sub ? ' <span style="font-weight:400;color:var(--ink-3);font-size:12px">'+esc(it.sub)+'</span>' : '');
+      }else{
+        b.textContent = it.label;
+      }
+      b.addEventListener("click", function(){
+        if(state.view === "prof") state.profTab = it.key; else state.classTab = it.key;
+        renderBanner(); renderOutput();
+      });
+      el.appendChild(b);
+    });
+  }
+
+  /* ---------- 요약 ---------- */
+  function renderSummary(c){
+    var h = '<div class="scrollx"><table class="matrix"><thead><tr>' +
+      '<th class="m-time">타임</th><th class="m-range">기간</th>' +
+      '<th>1교반</th><th>2교반</th><th>3교반</th><th class="m-rest">휴식</th></tr></thead><tbody>';
+    for(var t=0;t<5;t++){
+      h += '<tr><td class="time m-time">T'+(t+1)+'</td><td class="range m-range">'+rangeOf(c.blocks[t])+'</td>';
+      var teaching = [];
+      for(var j=1;j<=3;j++){
+        var p = slotAt(t,j), f = state.order[p];
+        teaching.push(p);
+        h += '<td class="subj"><span class="tag" style="background:'+bg(f)+';border-left-color:'+ln(f)+'">' +
+             esc(state.names[f]) + '<small>' + f + '</small></span></td>';
+      }
+      var resting = [];
+      for(var q=0;q<5;q++) if(teaching.indexOf(q) === -1) resting.push(esc(labelOf(q)));
+      h += '<td class="restcell m-rest">'+resting.join('<br>')+'</td></tr>';
+    }
+    h += '</tbody></table></div>';
+    h += '<div class="legend">' + state.order.map(function(f){
+      return '<span><i style="background:'+bg(f)+';border-color:'+ln(f)+'"></i>'+f+' — '+HUE[f]+'</span>';
+    }).join("") + '</div>';
+    h += '<div class="status ok" style="margin-top:14px">1교반 수강 순서 ' + state.order.join(" → ") +
+      ' · 각 교수는 1교반 → 2교반 → 3교반 순으로 이동합니다.</div>';
+    h += '<div style="margin-top:10px;font-size:12.5px;color:var(--ink-3)">특강 지정일 ' +
+      (state.lectures.length ? state.lectures.join(" · ") : "없음") +
+      ' · 수시시험은 각 타임 마지막 수업일에 해당 담당 교수가 자기 모듈 문제로 출제·채점합니다.</div>';
+    return h;
+  }
+
+  /* ---------- 진도표 ---------- */
+  function sheetHTML(who, lineColor, rowsHTML, foot, legendHTML){
+    return '<div class="sheet">' +
+      '<h3>수업진도표</h3>' +
+      '<p class="course">(과목명: 군사공학)</p>' +
+      '<div class="whowrap"><span class="who" style="--wholine:'+lineColor+'">' + esc(who) + '</span></div>' +
+      '<p class="basis">* \u201926년도 학사 일정 기준</p>' +
+      '<div class="scrollx"><table class="jd"><thead>' +
+      '<tr><th rowspan="2" class="c-wk">주</th><th rowspan="2" class="c-title">제목</th>' +
+      '<th rowspan="2" class="c-date">월/일<span class="c-dow">(요일)</span></th>' +
+      '<th rowspan="2" class="c-time">시간(분)</th>' +
+      '<th rowspan="2">내용</th><th rowspan="2" class="c-page">페이지</th>' +
+      '<th colspan="3" class="c-remark">비고</th></tr>' +
+      '<tr><th class="c-quiz">수시</th><th class="c-lab">실험</th><th class="c-pres">발표</th></tr>' +
+      '</thead><tbody>' + rowsHTML + '</tbody></table></div>' +
+      (legendHTML || '') +
+      '<p class="foot">' + esc(foot) + '</p></div>';
+  }
+
+  function buildRows(c, mode, key){
+    var out = "";
+    SESSIONS.forEach(function(s){
+      var cls = "", content = "", mark = "", title = "", style = "";
+      var fx = FIXED[s.md];
+      if(fx){
+        title = fx.title || ""; content = fx.content; cls = "off";
+      }else if(state.lectures.indexOf(s.md) !== -1){
+        content = "특강" + (state.lectures.indexOf(s.md) + 1) + " (외부 강사)"; cls = "off";
+      }else{
+        var t = c.timeOf[s.md], isQuiz = c.quiz.hasOwnProperty(s.md), tl = "T" + (t+1);
+        if(mode === "prof"){
+          var j = classAt(key, t);
+          if(j){
+            var f = state.order[key];
+            content = j + "교반 " + (isQuiz ? "수시시험" : "수업") + " (" + tl + ")";
+            style = ' style="background:' + (isQuiz ? md(f) : bg(f)) + '"';
+            if(isQuiz){ cls = "quiz"; mark = "Y"; }
+          }else{
+            content = "휴식"; cls = "rest";
+          }
+        }else{
+          var p = slotAt(t, key), f2 = state.order[p];
+          content = labelOf(p) + (isQuiz ? " \u2014 수시시험" : "") + " (" + tl + ")";
+          style = ' style="background:' + (isQuiz ? md(f2) : bg(f2)) + '"';
+          if(isQuiz){ cls = "quiz"; mark = "Y"; }
+        }
+      }
+      out += '<tr class="'+cls+'"'+style+'>';
+      if(s.first) out += '<td class="wk c-wk" rowspan="2">'+s.week+'</td>';
+      out += '<td class="c-title">'+esc(title)+'</td>' +
+             '<td class="c-date">'+s.md+'<span class="c-dow">('+s.dow+')</span></td>' +
+             '<td class="c-time">1(75)</td>' +
+             '<td class="content">'+esc(content)+'</td><td class="c-page">0-0</td>' +
+             '<td class="c-quiz">'+mark+'</td><td class="c-lab"></td><td class="c-pres"></td></tr>';
+    });
+    return out;
+  }
+
+  function legendFor(fields){
+    return '<div class="legend">' + fields.map(function(f){
+      return '<span><i style="background:'+bg(f)+';border-color:'+ln(f)+'"></i>'+f+'</span>';
+    }).join("") + '<span><i style="background:var(--rest);border-color:#B9C0CC"></i>휴식 · 수업 미실시</span>' +
+    '<span style="color:var(--ink-3)">진한 음영 = 수시시험일</span>' +
+    '<span class="mobile-only" style="color:var(--ink-3)">휴대폰에서는 핵심 4개 열만 표시 · 인쇄는 원본 서식</span></div>';
+  }
+
+  function profSheet(c, p){
+    var f = state.order[p], teach = [], rest = [];
+    for(var t=0;t<5;t++){
+      var j = classAt(p,t);
+      if(j) teach.push("T"+(t+1)+" "+j+"교반 ("+rangeOf(c.blocks[t])+")"); else rest.push("T"+(t+1));
+    }
+    var foot = "※ 담당: " + teach.join(" / ") + "   ※ 휴식: " + rest.join(", ") +
+               "   ※ 각 타임 마지막 수업일에 본인 모듈 수시시험 출제·채점";
+    return sheetHTML(state.names[f] + " — " + f, ln(f), buildRows(c,"prof",p), foot, legendFor([f]));
+  }
+
+  function classSheet(c, j){
+    var seq = [];
+    for(var t=0;t<5;t++) seq.push(state.names[state.order[slotAt(t,j)]]);
+    var foot = "※ 담당 교수 순서: " + seq.join(" → ") + "   ※ 각 타임 마지막 수업일은 해당 담당 교수의 수시시험";
+    return sheetHTML(j + "교반", "var(--ink)", buildRows(c,"class",j), foot, legendFor(state.order));
+  }
+
+  function renderOutput(){
+    var c = compute();
+    renderStatus(c);
+    var out = document.getElementById("output");
+    if(!c.valid){
+      out.innerHTML = '<div class="empty">특강을 정확히 2회 지정하면 편성표가 생성됩니다.</div>';
+      return;
+    }
+    if(state.view === "summary"){ out.innerHTML = renderSummary(c); return; }
+    var h = "";
+    if(state.view === "prof"){
+      if(state.profTab === "all"){
+        state.order.forEach(function(f,p){ h += profSheet(c,p); });
+      }else{
+        var p = state.order.indexOf(state.profTab);
+        if(p === -1) p = 0;
+        h = profSheet(c,p);
+      }
+    }else{
+      if(state.classTab === "all"){ for(var j=1;j<=3;j++) h += classSheet(c,j); }
+      else h = classSheet(c, parseInt(state.classTab,10));
+    }
+    out.innerHTML = h;
+  }
+
+  function renderAll(){ renderPlans(); renderDates(); renderCycle(); renderBanner(); renderOutput(); }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
+    t.addEventListener("click", function(){
+      state.view = t.dataset.view;
+      Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(x){
+        x.setAttribute("aria-selected", x === t ? "true" : "false");
+      });
+      renderBanner(); renderOutput();
+    });
+  });
+  document.getElementById("btnPrint").addEventListener("click", function(){ window.print(); });
+
+  /* ---------- 화면 전환 ---------- */
+  var home = document.getElementById("home");
+  var tool = document.getElementById("tool");
+  var back = document.getElementById("btnBack");
+  var pageTitle = document.getElementById("pageTitle");
+  var pageSub = document.getElementById("pageSub");
+
+  function show(view){
+    var isTool = view === "tool";
+    home.hidden = isTool;
+    tool.hidden = !isTool;
+    back.hidden = !isTool;
+    pageTitle.textContent = isTool ? "팀티칭 편성기" : "26-2학기 군사공학 대시보드";
+    pageSub.textContent = isTool
+      ? "학사일정과 담당 순서를 정하면 진도표가 자동으로 생성됩니다"
+      : "2026학년도 2학기 · 화·목 1교시(75분) · 교수 5명 / 교반 3개";
+    if(location.hash !== (isTool ? "#tool" : "")){
+      location.hash = isTool ? "tool" : "";
+    }
+    window.scrollTo(0, 0);
+  }
+
+  document.getElementById("cardTool").addEventListener("click", function(){ show("tool"); });
+  back.addEventListener("click", function(){ show("home"); });
+  window.addEventListener("hashchange", function(){
+    show(location.hash === "#tool" ? "tool" : "home");
+  });
+
+  renderAll();
+  show(location.hash === "#tool" ? "tool" : "home");
+})();
+</script>
+</body>
+</html>
